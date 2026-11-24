@@ -31,7 +31,7 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE peti TO peti;"
 
 # ── Clone repo ──
 cd /opt
-git clone https://github.com/YuzhengShi/Peti.git peti || true
+git clone https://github.com/YuzhengShi/peti-pixel-companion.git peti || true
 cd /opt/peti
 
 # ── API setup ──

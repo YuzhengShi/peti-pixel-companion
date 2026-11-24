@@ -24,7 +24,7 @@ dnf install -y nodejs20 npm
 
 # ── Clone repo ──
 cd /opt
-git clone https://github.com/YuzhengShi/Peti.git peti || true
+git clone https://github.com/YuzhengShi/peti-pixel-companion.git peti || true
 cd /opt/peti
 
 # ── API setup ──

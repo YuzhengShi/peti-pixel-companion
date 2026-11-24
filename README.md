@@ -53,7 +53,7 @@ The pet's appearance is still a placeholder (an emoji on the dashboard). The spr
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TD
   B["Browser (React)"] -->|"POST /api/chat"| A["API (Express)"]
   A -->|"SSE events"| B
   A -->|"JSON lines on stdin"| C["Agent container, one per user"]

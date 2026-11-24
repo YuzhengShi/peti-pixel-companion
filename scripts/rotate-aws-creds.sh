@@ -1,10 +1,10 @@
 #!/bin/bash
 # Rotate AWS credentials on EC2 when ISB lease expires
-# Usage: bash scripts/rotate-aws-creds.sh <ACCESS_KEY> <SECRET_KEY> <SESSION_TOKEN>
+# Usage: PETI_EC2_HOST=ubuntu@<server-address> bash scripts/rotate-aws-creds.sh <ACCESS_KEY> <SECRET_KEY> <SESSION_TOKEN>
 
 set -e
 
-EC2_HOST="ubuntu@44.224.223.82"
+EC2_HOST="${PETI_EC2_HOST:?set PETI_EC2_HOST, for example PETI_EC2_HOST=ubuntu@<server-address>}"
 SSH_KEY="$HOME/.ssh/tai-deploy"
 
 if [ $# -ne 3 ]; then

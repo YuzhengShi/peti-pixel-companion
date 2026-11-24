@@ -2,6 +2,15 @@
 set -euo pipefail
 exec > /var/log/peti-setup.log 2>&1
 
+# ── Secrets ──
+# No secret is stored in this file. When the script is run by hand, each value
+# can be passed in the environment (letters and digits only); otherwise, as under
+# EC2 user data, a random value is generated here and kept only in
+# /opt/peti/api/.env (mode 600).
+DB_PASSWORD="${PETI_DB_PASSWORD:-$(openssl rand -hex 32)}"
+JWT_SECRET="${PETI_JWT_SECRET:-$(openssl rand -hex 32)}"
+INTERNAL_SECRET="${PETI_INTERNAL_SECRET:-$(openssl rand -hex 32)}"
+
 # ── System packages ──
 apt-get update -y
 apt-get install -y docker.io git nginx postgresql postgresql-contrib
@@ -16,7 +25,7 @@ usermod -aG docker ubuntu
 
 # ── PostgreSQL ──
 systemctl enable postgresql --now
-sudo -u postgres psql -c "CREATE USER peti WITH PASSWORD 'Peti2026SecureDB!';"
+sudo -u postgres psql -c "CREATE USER peti WITH PASSWORD '${DB_PASSWORD}';"
 sudo -u postgres psql -c "CREATE DATABASE peti OWNER peti;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE peti TO peti;"
 
@@ -29,14 +38,15 @@ cd /opt/peti
 cd /opt/peti/api
 npm install
 
-cat > .env << 'ENVEOF'
-DATABASE_URL=postgresql://peti:Peti2026SecureDB!@localhost:5432/peti
-JWT_SECRET=peti-jwt-s3cr3t-k3y-2026-apr
+install -m 600 /dev/null .env
+cat > .env << ENVEOF
+DATABASE_URL=postgresql://peti:${DB_PASSWORD}@localhost:5432/peti
+JWT_SECRET=${JWT_SECRET}
 OPENWEATHERMAP_API_KEY=
 FRONTEND_URL=http://localhost
 PORT=3001
 NODE_ENV=production
-INTERNAL_SECRET=peti-internal-s3cr3t-2026
+INTERNAL_SECRET=${INTERNAL_SECRET}
 CONTAINER_IMAGE=peti-agent:latest
 AGENT_CHARACTER_DIR=/opt/peti/agent/character
 FRAMEWORK_DIR=/opt/peti/docs/framework

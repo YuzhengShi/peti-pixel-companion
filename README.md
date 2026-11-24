@@ -253,4 +253,4 @@ Deployed on a single AWS EC2 instance (Terraform in `infra/`):
 - **Reverse Proxy**: Nginx routes `/api/*` to backend, serves SPA with fallback
 - **Agent**: Docker containers running Claude Agent SDK (Bedrock)
 
-**Live URL**: http://44.224.223.82
+**Deployment**: ran on AWS EC2 for the spring 2026 course; `infra/` has the scripts to deploy your own copy.

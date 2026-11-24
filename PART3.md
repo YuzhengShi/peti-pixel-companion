@@ -246,7 +246,7 @@ All three components deployed on a single AWS EC2 instance:
 
 **Reverse Proxy**: Nginx routes `/api/*` to Express backend (with SSE support), serves static assets with 1-year cache headers, and falls back to `index.html` for client-side routing.
 
-**Live URL**: http://44.224.223.82
+**Deployment**: ran on AWS EC2 for the spring 2026 course; `infra/` has the scripts to deploy your own copy.
 
 **Infrastructure**: EC2 t3.medium, Ubuntu 22.04, 30GB gp3, in us-west-2. Security group allows SSH (22), HTTP (80), HTTPS (443).
 
@@ -342,4 +342,4 @@ YouTube link: *(to be added after recording)*
 | 9 | Accessibility | Lighthouse 100/100 on 3 pages, skip-link, ARIA labels, focus-visible, semantic HTML | Done |
 | 10 | Testing | 33 tests across 4 files (RadarChart, Navbar, MemoriesPage, scoring engine) | Done |
 | 11 | Responsive Design | 640px mobile + 768px tablet breakpoints, DraggableWindow adapts | Done |
-| 12 | Deployment | PostgreSQL + Express API + Vite client on EC2, live at http://44.224.223.82 | Done |
+| 12 | Deployment | PostgreSQL + Express API + Vite client on EC2 (spring 2026) | Done |

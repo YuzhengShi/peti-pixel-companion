@@ -42,7 +42,8 @@ ENVEOF
 
 npx prisma generate
 npx prisma migrate deploy
-npx prisma db seed || true
+# Not seeded here: prisma/seed.ts creates two test accounts whose passwords are
+# in the README (local development only).
 npm run build
 
 # ── Client build ──

@@ -163,7 +163,7 @@ This runs 33 Vitest tests in 4 files: the scoring engine (18) and the RadarChart
 
 The scripts in [`infra/`](infra) are what the course deployment used: Terraform ([`main.tf`](infra/main.tf)) for an EC2 instance, plus user-data scripts that install PostgreSQL, Nginx and Docker, build the client and the agent image, and start the API under systemd. Nginx serves the built client and proxies `/api/*` to the API. Copy [`terraform.tfvars.example`](infra/terraform.tfvars.example), fill in your own values, and read the scripts before you run them.
 
-> Before you expose a deployment, change or delete the two seeded accounts. [`infra/user-data.sh`](infra/user-data.sh) tries to run `npx prisma db seed`, which would create them. Also replace the default `JWT_SECRET` and `INTERNAL_SECRET` in your `.env`.
+> [`infra/user-data.sh`](infra/user-data.sh) does not run the seed, so a new deployment has no test accounts. If you seed one yourself, change or delete the two accounts before you expose it. Also replace the default `JWT_SECRET` and `INTERNAL_SECRET` in your `.env`.
 
 ## Repository layout
 

@@ -11,6 +11,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1030.0",
     "@prisma/client": "^6.5.0",

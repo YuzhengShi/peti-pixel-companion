@@ -26,3 +26,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+----------------------------------------------------------------------
+
+Third-party content not covered by this project's MIT License
+
+The MIT License in LICENSE covers the source code of this repository only.
+
+Assessment instruments. The questions in client/src/questions/ and the scoring
+in client/src/scoring/ are original wording informed by published instruments.
+The instruments themselves belong to their authors and owners:
+  - International Personality Item Pool (IPIP), Big Five
+  - Experiences in Close Relationships-Revised (ECR-R), attachment
+  - DSM-5 Alternative Model for Personality Disorders and the Level of
+    Personality Functioning Scale (LPFS-BF 2.0), personality functioning
+  - WHODAS 2.0 (World Health Organization), daily functioning
+  - PROMIS Sleep Disturbance, sleep
+  - Emotion Regulation Questionnaire (ERQ and ERQ-S), emotion regulation
+See docs/beyond-personality-framework.txt for the references the project cites.
+
+Media. The source and terms of the following files are not recorded in this
+repository:
+  - client/public/city.gif
+  - client/public/city-night.gif
+  - client/public/aventure-lofi-chill-nostalgic-469629.mp3
+  - client/public/monume-lofi-lofi-girl-lofi-chill-509453.mp3
+Check their terms before redistributing them.

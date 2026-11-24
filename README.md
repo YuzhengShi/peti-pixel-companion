@@ -1,256 +1,206 @@
+<div align="center">
+
 # Peti
 
-A pixel-art virtual companion web application. Take a personality assessment framed as your pet getting to know you, then chat daily with a companion that remembers your conversations, understands your personality, and grows with you over time.
+**A pixel companion that truly knows you**
 
-## Project Description
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=white)](client/package.json)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6.svg?logo=typescript&logoColor=white)](client/package.json)
+[![Prisma 6](https://img.shields.io/badge/Prisma-6-2D3748.svg?logo=prisma&logoColor=white)](api/package.json)
+[![Agent runner adapted from NanoClaw](https://img.shields.io/badge/agent%20runner-adapted%20from%20NanoClaw-555.svg)](https://github.com/nanocoai/nanoclaw)
 
-Peti bridges the gap between AI chatbots that start from zero every conversation and agent frameworks that can execute tasks but don't understand the user as a person. The experience begins with a game-like personality assessment across six psychological dimensions, after which the pet becomes a daily emotional companion providing personalized help through five specialized sub-agents.
+[What it does](#what-peti-does) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Tests](#tests) · [Layout](#repository-layout) · [Credits](#credits) · [License](#license)
 
-Three layers of value:
+<img src="docs/images/home.png" alt="Peti landing page: a pixel-art city with a cherry-blossom branch, the headline Hello, I'm Peti, and the buttons Get Started and Learn More" width="560">
 
-| Layer | What It Does | How It Feels |
-|-------|-------------|--------------|
-| Emotional | Listen, validate, remember | Someone understands me |
-| Insight | Notice patterns, track whether past advice worked | Someone is looking out for me |
-| Action | Research, recommend activities matched to personality | Someone is helping me |
+</div>
 
-## Tech Stack
+Peti is a web app with a pixel-art companion that you talk to every day. Most chatbots start from zero each time and know nothing about you. Peti starts with a short game-like personality assessment, written up as your pet getting to know you. It then keeps that profile, a list of memories and a mood, and uses them in every reply.
 
-- **Frontend**: React 19 + TypeScript + Vite
-- **Backend**: Express + TypeScript + Prisma ORM
-- **Database**: PostgreSQL (Docker)
-- **Auth**: JWT HttpOnly cookies
-- **Styling**: CSS variables, glass-morphism, Press Start 2P pixel font
-- **External API**: OpenWeatherMap (weather proxy)
+It is for anyone curious about how a long-lived AI companion can be built: a React front end, an Express and PostgreSQL back end, and one Claude agent per user running in its own Docker container. It began as a spring 2026 course project and the repository still contains the three course write-ups ([PART1.md](PART1.md), [PART2.md](PART2.md), [PART3.md](PART3.md)).
 
-## Features
+**Status.** Peti was deployed on a single AWS EC2 instance for the course. That deployment is not running now, so there is no live demo. You can run your own copy with the steps below.
 
-### Security and Role-Based Access Control
+## What Peti does
 
-- JWT token cookie authentication (`requireAuth` middleware)
-- Two roles: `user` (default) and `admin` (`requireRole` middleware)
-- Admin can manage all users; regular users can only access their own data
-- Server-side validation on all endpoints, client-side validation on all forms
+- **Personality assessment.** 106 questions in 6 domains: daily functioning, sleep, emotion regulation, attachment, personality functioning and the Big Five. Answers are saved as you go, so you can leave and resume. Results appear as radar charts with descriptive bands (lower, moderate, higher), not diagnoses.
+- **A generated profile.** Once all 6 domains are done, Bedrock models write a profile that the companion reads before every conversation.
+- **A companion that remembers.** The agent stores memories in four categories (observation, strategy, preference, milestone) and gets the most important ones back at the start of each session.
+- **Mood and state.** Peti has a mood, an energy level and an animation. The agent changes them during a chat and the browser receives the change over the same stream as the reply.
+- **A relationship that grows.** The persona files describe four stages (stranger, acquaintance, companion, deep bond). The agent can advance the stage, and the pet's level follows.
+- **Five specialist sub-agents.** Health, relationship, hobby, occupational, and growth and purpose. The agent consults them internally when a topic fits and answers in Peti's own voice.
+- **Everything else you would expect.** Cookie-based login, user and admin roles, an admin user list, a memories page with search, a category filter and optimistic delete, light and dark themes, a weather panel, and draggable windows.
+
+The pet's appearance is still a placeholder (an emoji on the dashboard). The sprite-swap events are sent by the server, but there is no sprite art in this repository.
 
 ### Pages
 
-| Page | Route | Access | Description |
-|------|-------|--------|-------------|
-| Homepage | `/` | Public | Pixel-art landing page with animated GIF background, Learn More modal |
-| Register | `/register` | Public | Client-side validation: email format, username 3-20 chars, password strength (8+ chars, uppercase, number) |
-| Login | `/login` | Public | Email + password authentication |
-| Pet Creation | `/pet/new` | Auth | Name input, egg emoji placeholder, redirects to personality test |
-| Personality Test | `/test` | Auth | 106-question assessment across 6 domains, auto-save + resume |
-| Test Results | `/results` | Auth | Radar chart with descriptive bands (lower/moderate/higher) |
-| Profile | `/profile` | Auth | 6-dimension radar chart with subscale detail cards |
-| Dashboard | `/dashboard` | Auth | Pet info + chat + weather + embedded memories panel |
-| Admin Dashboard | `/admin` | Admin | User list with search and pagination |
-| Admin User Detail | `/admin/users/:id` | Admin | View/edit/delete specific user |
+| Page | Route | Access |
+|------|-------|--------|
+| Home | `/` | Public |
+| Register | `/register` | Public |
+| Login | `/login` | Public |
+| Pet creation | `/pet/new` | Signed in |
+| Personality test | `/test` | Signed in |
+| Test results | `/results` | Signed in |
+| Profile | `/profile` | Signed in |
+| Dashboard (chat, weather, memories) | `/dashboard` | Signed in |
+| New memory | `/memories/new` | Signed in |
+| Admin dashboard | `/admin` | Admin |
+| Admin user detail | `/admin/users/:id` | Admin |
 
-### API Endpoints
+## How it works
 
-**Utility**
+```mermaid
+flowchart LR
+  B["Browser (React)"] -->|"POST /api/chat"| A["API (Express)"]
+  A -->|"SSE events"| B
+  A -->|"JSON lines on stdin"| C["Agent container, one per user"]
+  C -->|"marked output on stdout"| A
+  C -->|"Claude Agent SDK"| L["Claude on AWS Bedrock"]
+  C --> M["peti MCP server, 5 tools"]
+  M -->|"x-internal-secret"| I["API internal routes"]
+  I --> D[("PostgreSQL")]
+  A --> D
+```
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/ping` | No | Health check |
+**One chat message, step by step**
 
-**Authentication**
+1. `POST /api/chat` ([`api/src/routes/chat.ts`](api/src/routes/chat.ts)) saves the message, opens a Server-Sent Events stream and delivers any proactive message Peti queued earlier.
+2. The container runner ([`api/src/container-runner.ts`](api/src/container-runner.ts)) writes three files for the user: `PROFILE.md` (the generated profile), `STATE.md` (mood, energy, streak) and `CONTEXT.md` (the last 30 messages and the 10 most important memories). It then starts a container named `peti-<userId>` if none is running, with 2 GB of memory, half a CPU, all Linux capabilities dropped and `no-new-privileges`. The user's files are mounted read-write, the character files read-only.
+3. AWS credentials and the internal secret reach the container as a JSON line on stdin, not as Docker environment variables. The first line carries the prompt and credentials. Later lines are `{"type":"message","text":"..."}`.
+4. Inside the container ([`agent/container/agent-runner/src/index.ts`](agent/container/agent-runner/src/index.ts)) the runner builds the system prompt from the three user files plus [`agent/character/CLAUDE.md`](agent/character/CLAUDE.md) and [`agent/character/RELATIONSHIP_ARC.md`](agent/character/RELATIONSHIP_ARC.md), then calls the Claude Agent SDK through Bedrock. The default model is `us.anthropic.claude-sonnet-4-6`, and `ANTHROPIC_MODEL` overrides it. Two hooks block reads of `.env` and `.db` files and strip AWS keys from shell commands. Text in `<internal>` tags is removed before the reply is sent.
+5. The agent can call five tools from the `peti` MCP server ([`peti-mcp.ts`](agent/container/agent-runner/src/peti-mcp.ts)): `pet_update`, `memory_create`, `memory_query`, `profile_update` and `send_message`. Each calls back into `/api/internal/*` ([`internal.ts`](api/src/routes/internal.ts)) with a shared secret, and the API writes to PostgreSQL.
+6. The API splits the reply into sentences, streams them to the browser, saves the reply as a message, and reads `STATE.md` back into the `UserState` table when the chat ends.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Create user with default role, set token cookie |
-| POST | `/api/auth/login` | No | Verify credentials, return user data with role |
-| POST | `/api/auth/logout` | Yes | Clear token cookie |
-| GET | `/api/auth/me` | Yes | Return current user data including role |
+The container stays up between messages, so the agent keeps its session. The session ID is stored in the `Session` table.
 
-**Memories (CRUD)**
+### The companion's brain
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/memories` | Yes | Paginated list with `?search=` and `?category=` filter |
-| POST | `/api/memories` | Yes | Create memory with server-side validation |
-| PUT | `/api/memories/:id` | Yes | Update own memory |
-| DELETE | `/api/memories/:id` | Yes | Soft-delete own memory |
+The persona is plain Markdown in [`agent/character/`](agent/character), so you can change the character without touching code.
 
-**Pets**
+- [`CLAUDE.md`](agent/character/CLAUDE.md) holds the hard rules (for example a 100-word cap per reply and no question stacking), a five-step loop run on every turn, response style, memory rules, three consent tiers for actions (suggest, search with a heads-up, act only with explicit approval) and the instructions for consulting the sub-agents with the SDK's `Task` tool.
+- [`RELATIONSHIP_ARC.md`](agent/character/RELATIONSHIP_ARC.md) defines the four stages and how each changes the way Peti behaves, including which sub-agents come into play at which stage.
+- [`PROFILE_TEMPLATE.md`](agent/character/PROFILE_TEMPLATE.md) is the blank profile the generator fills in.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/pets` | Yes | Create pet (one per user) |
-| GET | `/api/pets/mine` | Yes | Get current user's pet |
-| PUT | `/api/pets/:id` | Yes | Update own pet |
+The sub-agents are described in the persona prompt and run through the SDK's `Task` tool. They are not separate services or files.
 
-**Profiles**
+### Generating the profile
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/profiles` | Yes | Submit scored domain results |
-| GET | `/api/profiles` | Yes | Get all own profile results |
+[`api/src/profile-generator.ts`](api/src/profile-generator.ts) reads the framework notes in [`docs/framework/`](docs/framework/00-orchestrator.md). It asks Claude Sonnet 4.6 to interpret each of the 6 domains, asks Claude Opus 4.6 to merge them into one profile written like a friend's description of a person, and asks Sonnet 4.6 for a short summary for the profile page. Calls go to Bedrock in `us-west-2`.
 
-**Chat and Messages**
+### Data model
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/chat` | Yes | Send message, receive SSE stream response |
-| GET | `/api/messages` | Yes | Paginated message history |
-| DELETE | `/api/messages/:id` | Yes | Delete own message |
-
-**Admin**
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/admin/users` | Admin | List all users with search + pagination |
-| GET | `/api/admin/users/:id` | Admin | User detail with pet, profile, counts |
-| PUT | `/api/admin/users/:id` | Admin | Update user role |
-| DELETE | `/api/admin/users/:id` | Admin | Delete user (cascade) |
-
-**External API**
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/weather` | Yes | OpenWeatherMap proxy (`?lat=&lon=` or `?city=`) |
-
-### UX States
-
-Every data-fetching page implements loading, error, and empty states:
-
-| Page | Loading | Error | Empty |
-|------|---------|-------|-------|
-| Memories | "finding our memories..." | Retry button | "nothing here yet. we're just getting started." |
-| Dashboard | Pet sleeping animation | "I can't seem to connect right now..." | "Hi! I'm so happy to meet you!" |
-| Test Results | "thinking about what this means..." | Retry button | Link to personality test |
-| Profile | Radar chart outline pulses | "couldn't load your profile right now" | "complete the personality test to see your profile" |
-| Admin | Skeleton table rows | "couldn't load users" | "no users found" |
-
-### Additional Features
-
-- **Optimistic Updates**: Memory deletion removes from UI immediately, rolls back on API failure with toast notification
-- **Pagination + Filtering + Search**: Memories page supports paginated results, category filter, and debounced search (300ms)
-- **Dark Mode**: CSS variables for theming, persisted in localStorage, respects `prefers-color-scheme` on first visit
-- **Form Validation**: Client-side (real-time field errors) + server-side (400 with structured error details) on all forms. Complex validation includes password strength (uppercase + number), email format, unique username check
-- **Responsive Design**: Mobile-first with breakpoints at 640px (mobile) and 768px (tablet)
-- **Glass-morphism UI**: All pages rendered in draggable, resizable floating windows with backdrop-filter blur
-- **Accessibility**: Skip-to-content link, focus-visible outlines, ARIA labels on all interactive elements, semantic landmarks (`<main>`, `<nav>`, `role="dialog"`)
-- **Unit Tests**: 33 tests across 4 test files (RadarChart, Navbar, MemoriesPage, scoring engine) using Vitest + React Testing Library
-
-## Database
-
-8 Prisma models:
+Eight Prisma models ([`schema.prisma`](api/prisma/schema.prisma)):
 
 ```
 User ──┬── Pet (one-to-one)
        ├── Memory (one-to-many, soft-delete)
        ├── Message (one-to-many)
-       ├── ProfileResult (one-to-many, unique per dimension)
+       ├── ProfileResult (one-to-many, unique per domain)
        ├── Session (one-to-one)
        ├── UserProfile (one-to-one)
        └── UserState (one-to-one)
 ```
 
-User table includes `role` field (`"user"` | `"admin"`) for role-based access control.
+### API
 
-## User Roles
+The REST and SSE endpoints, and the internal routes the agent uses, are listed in [docs/api.md](docs/api.md).
 
-**User (default)**:
-- Register, login, manage own account
-- Create/customize own pet
-- Take personality test, view own profile results
-- Chat with own pet, view/delete own messages
-- View/update/delete own memories
+## Quick start
 
-**Admin**:
-- All user permissions
-- View all users with search/pagination
-- View any user's profile and pet data
-- Update any user's role
-- Delete any user account (cascade)
-
-## Project Structure
-
-```
-peti/
-├── api/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   ├── seed.ts
-│   │   └── migrations/
-│   ├── src/
-│   │   ├── index.ts               # Express app, route registration, /ping
-│   │   ├── config.ts              # Environment variables
-│   │   ├── db.ts                  # Prisma client singleton
-│   │   ├── middleware/
-│   │   │   ├── requireAuth.ts     # JWT cookie verification
-│   │   │   └── requireRole.ts     # Role-based access control
-│   │   └── routes/
-│   │       ├── auth.ts            # register, login, logout, me
-│   │       ├── memories.ts        # CRUD with pagination, search, filter
-│   │       ├── admin.ts           # User management (admin only)
-│   │       ├── pets.ts            # Pet CRUD
-│   │       ├── profiles.ts        # Personality test results
-│   │       ├── weather.ts         # OpenWeatherMap proxy
-│   │       ├── messages.ts        # Chat message history
-│   │       └── chat.ts            # SSE streaming
-│   └── package.json
-├── client/
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── api/                   # Typed fetch wrappers
-│   │   ├── hooks/                 # useAuth, useSettings, useDebounce, useTestProgress, usePetStream, useWeather
-│   │   ├── components/            # Navbar, ProtectedRoute, AdminRoute, DraggableWindow, RadarChart, SettingsPanel
-│   │   ├── pages/                 # All page components (12 pages)
-│   │   ├── questions/             # 106-item personality assessment question bank (6 domains)
-│   │   ├── scoring/               # Scoring engine with subscale bands + unit tests
-│   │   ├── __tests__/             # Component tests (RadarChart, Navbar, MemoriesPage)
-│   │   └── styles/globals.css     # CSS variables, glass-morphism, animations, responsive
-│   ├── vite.config.ts
-│   └── package.json
-├── accessibility_reports/
-└── README.md
-```
-
-## Running Locally
-
-### Prerequisites
-
-- Node.js 20+
-- Docker (for PostgreSQL)
-
-### Setup
+Prerequisites: Node.js 20 or newer, and Docker. The infrastructure scripts install Node 20 and the agent image uses Node 22.
 
 ```bash
-# Start PostgreSQL
+git clone https://github.com/YuzhengShi/peti-pixel-companion.git
+cd peti-pixel-companion
+
+# PostgreSQL
 docker compose up -d
 
 # API
 cd api
-cp .env.example .env       # Set DATABASE_URL, JWT_SECRET
+cp .env.example .env       # then set DATABASE_URL, JWT_SECRET and the rest
 npm install
 npx prisma migrate dev
-npx prisma db seed
-npm run dev                 # http://localhost:3001
+npm run db:seed            # optional, creates the two test accounts below
+npm run dev                # http://localhost:3001
 
-# Client (separate terminal)
+# Client (in a second terminal, from the repository root)
 cd client
 npm install
-npm run dev                 # http://localhost:5173
+npm run dev                # http://localhost:5173
 ```
 
-### Test Accounts
+The accounts, pages, assessment and memories work with this alone. Chat and profile generation also need the agent image and AWS access:
+
+```bash
+docker build -t peti-agent:latest agent/container
+```
+
+Then add AWS credentials that can invoke Anthropic models on Amazon Bedrock to `api/.env` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`), or run the API on an EC2 instance with a suitable role. Model access for Claude Sonnet 4.6 and Opus 4.6 must be enabled in your account. Weather needs `OPENWEATHERMAP_API_KEY`.
+
+### Local test accounts
+
+`npm run db:seed` creates these two accounts. They are for local development only.
 
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@peti.dev | Admin123 |
 | User | test@peti.dev | User1234 |
 
-## Deployment
+## Tests
 
-Deployed on a single AWS EC2 instance (Terraform in `infra/`):
+```bash
+cd client
+npm test
+```
 
-- **Database**: PostgreSQL 14 on EC2
-- **API**: Node.js + Express (systemd service)
-- **Client**: Vite build served by Nginx
-- **Reverse Proxy**: Nginx routes `/api/*` to backend, serves SPA with fallback
-- **Agent**: Docker containers running Claude Agent SDK (Bedrock)
+This runs 33 Vitest tests in 4 files: the scoring engine (18) and the RadarChart, Navbar and MemoriesPage components (5 each). There are no automated tests for the API or the agent.
 
-**Deployment**: ran on AWS EC2 for the spring 2026 course; `infra/` has the scripts to deploy your own copy.
+## Deploying
+
+The scripts in [`infra/`](infra) are what the course deployment used: Terraform ([`main.tf`](infra/main.tf)) for an EC2 instance, plus user-data scripts that install PostgreSQL, Nginx and Docker, build the client and the agent image, and start the API under systemd. Nginx serves the built client and proxies `/api/*` to the API. Copy [`terraform.tfvars.example`](infra/terraform.tfvars.example), fill in your own values, and read the scripts before you run them.
+
+> Before you expose a deployment, change or delete the two seeded accounts. [`infra/user-data.sh`](infra/user-data.sh) tries to run `npx prisma db seed`, which would create them. Also replace the default `JWT_SECRET` and `INTERNAL_SECRET` in your `.env`.
+
+## Repository layout
+
+```
+api/                     Express + Prisma back end
+  prisma/                schema, migrations, seed script
+  src/routes/            auth, chat, internal, memories, messages, pets, profiles, weather, admin
+  src/container-runner.ts    starts and talks to the per-user agent containers
+  src/profile-manager.ts     writes PROFILE.md, STATE.md, CONTEXT.md; reads STATE.md back
+  src/profile-generator.ts   builds the written profile with Bedrock
+agent/
+  character/             persona, relationship arc, profile template (Markdown)
+  container/             Dockerfile and the agent runner with the peti MCP server
+client/                  React + Vite front end
+  src/questions/         the 106 assessment items
+  src/scoring/           scoring, bands and tests
+docs/                    API reference and the assessment framework notes
+infra/                   Terraform and server setup scripts
+PART1.md PART2.md PART3.md   course write-ups
+```
+
+## Credits
+
+- **NanoClaw.** The agent container under `agent/container/`, in particular the agent runner, is adapted from [NanoClaw](https://github.com/nanocoai/nanoclaw), which is MIT-licensed. See [NOTICE](NOTICE) for its license text.
+- **Claude Agent SDK and Amazon Bedrock** run the agent and the profile generator.
+- **Assessment framework.** The assessment follows the Beyond Personality framework, a non-clinical educational framework whose author is credited in [PART1.md](PART1.md). It is described in [docs/beyond-personality-framework.txt](docs/beyond-personality-framework.txt) and [docs/framework/](docs/framework/00-orchestrator.md). The questions are original wording informed by published instruments: the IPIP (Big Five), the ECR-R (attachment), the DSM-5 Alternative Model for Personality Disorders and the LPFS-BF 2.0 (personality functioning), the WHODAS 2.0 (daily functioning), PROMIS Sleep Disturbance (sleep) and the Emotion Regulation Questionnaire (emotion regulation). The instruments belong to their authors and owners. Peti is an educational tool for self-reflection. Its results are not a diagnosis and not a substitute for professional care.
+- **Press Start 2P** is loaded from Google Fonts at runtime.
+
+## License
+
+The source code is released under the [MIT License](LICENSE), copyright 2026 Yuzheng Shi.
+
+The MIT license covers the source code only. It does not cover:
+
+- the published instruments named under Credits, which the assessment items and scoring are modelled on;
+- the pixel-art animations `client/public/city.gif` and `client/public/city-night.gif`, whose source is not recorded in this repository;
+- the music files in `client/public/` (`aventure-lofi-chill-nostalgic-469629.mp3` and `monume-lofi-lofi-girl-lofi-chill-509453.mp3`), whose source is not recorded in this repository;
+- the NanoClaw code under `agent/container/`, which stays under its own MIT license (see [NOTICE](NOTICE)).
+
+If you reuse the repository, check the terms of the GIFs and music before you redistribute them.

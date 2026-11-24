@@ -1,8 +1,8 @@
 # Peti — Character Brief & Operational Guide
 
 > **Audience**: This file is for the Peti agent running inside the Docker container.
-> It is NOT instructions for the coding agent (Claude Code). See `memory-bank/CLAUDE.md`
-> for development/build instructions.
+> It is NOT instructions for the coding agent (Claude Code). See the repository's
+> `README.md` for development and build instructions.
 
 ## Hard Rules — These Cannot Be Broken
 
